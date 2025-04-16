@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Sticks Game</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      margin: 0;
+      padding: 0;
+      background: linear-gradient(to bottom right, #eef2f3, #8e9eab);
+      transition: background 1s ease;
+    }
+    h1 {
+      margin-top: 20px;
+    }
+    #setup, #game {
+      padding: 20px;
+    }
+    .hidden {
+      display: none;
+    }
+    .hand {
+      display: inline-block;
+      margin: 10px;
+      padding: 10px;
+      border: 2px solid #000;
+      border-radius: 10px;
+      min-width: 100px;
+      background: white;
+    }
+    .hand.disabled {
+      opacity: 0.5;
+    }
+    .sticks {
+      font-size: 2em;
+    }
+    .controls {
+      margin-top: 20px;
+    }
+    .message {
+      font-weight: bold;
+      margin-top: 20px;
+    }
+    .win-bg {
+      animation: winPulse 2s infinite;
+    }
+    @keyframes winPulse {
+      0% { background-color: #98FB98; }
+      50% { background-color: #90EE90; }
+      100% { background-color: #98FB98; }
+    }
+    .lose-bg {
+      animation: loseShake 0.3s infinite;
+    }
+    @keyframes loseShake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-5px); }
+      75% { transform: translateX(5px); }
+    }
+  </style>
+</head>
+<body>
+  <h1 id="turnDisplay">Welcome to Sticks</h1>
+
+  <!-- Setup Screen -->
+  <div id="setup">
+    <input type="text" id="p1NameInput" placeholder="Player 1 Name" />
+    <input type="text" id="p2NameInput" placeholder="Player 2 Name" />
+    <button onclick="startGame()">Start Game</button>
+  </div>
+
+  <!-- Game Screen -->
+  <div id="game" class="hidden">
+    <div id="player1Area">
+      <h2 id="p1Name">Player 1</h2>
+      <div class="hand" id="p1-left"><div>Left</div><div class="sticks" id="p1-left-count">🖐</div></div>
+      <div class="hand" id="p1-right"><div>Right</div><div class="sticks" id="p1-right-count">🖐</div></div>
+    </div>
+
+    <div id="player2Area">
+      <h2 id="p2Name">Player 2</h2>
+      <div class="hand" id="p2-left"><div>Left</div><div class="sticks" id="p2-left-count">🖐</div></div>
+      <div class="hand" id="p2-right"><div>Right</div><div class="sticks" id="p2-right-count">🖐</div></div>
+    </div>
+
+    <div class="controls">
+      <label>Choose your hand:
+        <select id="fromHand">
+          <option value="left">Left</option>
+          <option value="right">Right</option>
+        </select>
+      </label>
+      <label>Opponent's hand:
+        <select id="toHand">
+          <option value="left">Left</option>
+          <option value="right">Right</option>
+        </select>
+      </label>
+      <button onclick="tap()">Tap!</button>
+      <button onclick="endTurn()">End Turn</button>
+      <button onclick="resetGame()">Restart</button>
+    </div>
+
+    <div class="message" id="messageBox"></div>
+  </div>
+
+  <script>
+    let player1 = { name: '', left: 1, right: 1 };
+    let player2 = { name: '', left: 1, right: 1 };
+    let currentPlayer = 1;
+
+    function startGame() {
+      player1.name = document.getElementById("p1NameInput").value || "Player 1";
+      player2.name = document.getElementById("p2NameInput").value || "Player 2";
+      player1.left = player1.right = 1;
+      player2.left = player2.right = 1;
+      currentPlayer = 1;
+      document.getElementById("turnDisplay").innerText = `${player1.name}'s Turn`;
+
+      document.getElementById("p1Name").innerText = player1.name;
+      document.getElementById("p2Name").innerText = player2.name;
+
+      document.getElementById("setup").classList.add("hidden");
+      document.getElementById("game").classList.remove("hidden");
+      document.body.className = "";
+      updateUI();
+    }
+
+    function updateUI() {
+      document.getElementById("p1-left-count").textContent = drawFingers(player1.left);
+      document.getElementById("p1-right-count").textContent = drawFingers(player1.right);
+      document.getElementById("p2-left-count").textContent = drawFingers(player2.left);
+      document.getElementById("p2-right-count").textContent = drawFingers(player2.right);
+
+      document.getElementById("p1-left").classList.toggle("disabled", player1.left === 0);
+      document.getElementById("p1-right").classList.toggle("disabled", player1.right === 0);
+      document.getElementById("p2-left").classList.toggle("disabled", player2.left === 0);
+      document.getElementById("p2-right").classList.toggle("disabled", player2.right === 0);
+    }
+
+    function drawFingers(count) {
+      return count === 0 ? '❌' : '🖐'.repeat(count);
+    }
+
+    function tap() {
+      const from = document.getElementById("fromHand").value;
+      const to = document.getElementById("toHand").value;
+
+      const attacker = currentPlayer === 1 ? player1 : player2;
+      const defender = currentPlayer === 1 ? player2 : player1;
+
+      if (attacker[from] === 0 || defender[to] === 0) {
+        alert("Invalid move! Can't use or tap a dead hand.");
+        return;
+      }
+
+      defender[to] += attacker[from];
+      if (defender[to] >= 5) defender[to] = 0;
+
+      updateUI();
+      checkWin();
+    }
+
+    function endTurn() {
+      currentPlayer = currentPlayer === 1 ? 2 : 1;
+      const name = currentPlayer === 1 ? player1.name : player2.name;
+      document.getElementById("turnDisplay").innerText = `${name}'s Turn`;
+      document.getElementById("messageBox").textContent = "";
+    }
+
+    function checkWin() {
+      const p1Out = player1.left === 0 && player1.right === 0;
+      const p2Out = player2.left === 0 && player2.right === 0;
+
+      if (p1Out || p2Out) {
+        const winner = p1Out ? player2.name : player1.name;
+        const loser = p1Out ? player1.name : player2.name;
+
+        document.getElementById("messageBox").textContent = `${winner} wins! 🎉`;
+        document.getElementById("turnDisplay").textContent = `${winner} wins! 🎉`;
+
+        document.body.className = p1Out ? 'lose-bg' : 'win-bg';
+        disableControls();
+      }
+    }
+
+    function disableControls() {
+      document.querySelectorAll("button, select").forEach(btn => {
+        btn.disabled = true;
+      });
+    }
+
+    function resetGame() {
+      document.getElementById("p1NameInput").value = "";
+      document.getElementById("p2NameInput").value = "";
+      document.getElementById("setup").classList.remove("hidden");
+      document.getElementById("game").classList.add("hidden");
+      document.getElementById("messageBox").textContent = "";
+      document.body.className = "";
+      document.querySelectorAll("button, select").forEach(btn => btn.disabled = false);
+    }
+  </script>
+
+<a class = #Video href = "index.html" > Home </a>
+<br>
+<a class = #Video href = "scratch.html" > Scratch</a>
+</body>
+</html>
